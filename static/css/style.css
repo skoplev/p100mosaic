@@ -45,8 +45,12 @@ table th.vertical-header-right {
 
 svg.grid {
 	/*border-left: thin solid rgb(150, 150, 150);*/
-	border: thin solid rgb(210, 210, 210);
+	/*border: thin solid rgb(210, 210, 210);*/
 	/*border-collapse: collapse;*/
+}
+
+div.border-container {
+	border: thin solid rgb(210, 210, 210);
 }
 
 

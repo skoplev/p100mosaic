@@ -31,7 +31,7 @@
 <link rel="stylesheet" type="text/css" href="p100mosaic/static/css/style.css">
 <!-- <script type="/static/vendor/jquery.csv-0.71.js"></script> -->
 
-
+<!-- Mosaic visualizer functions -->
 <script type="text/javascript" src="p100mosaic/static/mosaic/visualizer.js"></script>
 
 <script type="text/javascript">
@@ -359,10 +359,13 @@ $(document).ajaxStop(function() {
 
 			var p100_k = p100_sel.indexOf(true);  // find first occurence
 
-			var svg_p100 = d3.selectAll(table_entry).append("svg")
-				.attr("width", tile_dim_px)
-				.attr("height", tile_dim_px)
-				.attr("class", "grid");
+			var svg_p100 = d3.selectAll(table_entry)
+				.append("div")
+				.attr("class", "border-container")
+					.append("svg")
+					.attr("width", tile_dim_px)
+					.attr("height", tile_dim_px)
+					.attr("class", "grid");
 
 			if (p100_k !== -1) {
 				// Data found
@@ -411,10 +414,13 @@ $(document).ajaxStop(function() {
 
 			var gcp_k = gcp_sel.indexOf(true);  // find first occurence
 
-			var svg_gcp = d3.selectAll(table_entry).append("svg")
-				.attr("width", tile_dim_px)
-				.attr("height", tile_dim_px)
-				.attr("class", "grid");
+			var svg_gcp = d3.selectAll(table_entry)
+				.append("div")
+				.attr("class", "border-container")
+					.append("svg")
+					.attr("width", tile_dim_px)
+					.attr("height", tile_dim_px)
+					.attr("class", "grid");
 
 			if (gcp_k !== -1) {
 				var rects = svg_gcp.selectAll(".cell")
