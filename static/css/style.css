@@ -16,7 +16,7 @@ table {
 }
 
 table td.grid {
-	padding: 4px;
+	padding: 3px;
 	font-size: 0;
 	/*white-space: nowrap;*/
 }
@@ -49,6 +49,10 @@ svg.grid {
 	/*border-collapse: collapse;*/
 }
 
+
+#sidebar {
+	/*background-color: grey;*/
+}
 
 /* Colors */
 
