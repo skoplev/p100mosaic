@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>mosaic visualization of P100</title>
+</head>
+<body>
+
+<!-- Jquery -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+
+<!-- D3 -->
+<script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+<!-- D3-tip -->
+<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+
+<!-- D3-tip style -->
+<!-- <link rel="stylesheet" href="//rawgithub.com/Caged/d3-tip/master/examples/example-styles.css"> -->
+
+
+
+<link rel="stylesheet" type="text/css" href="p100mosaic/static/css/style.css">
+
+
+<!-- <script type="/static/vendor/jquery.csv-0.71.js"></script> -->
+
+<script type="text/javascript">
+
+// Parses csv string into array of array.
+// Default data type is string.
+// formatter is a function that is applied to to each string element.
+// It can be used to convert strings to numbers: parseCsv(csv, Number)
+function parseCsv(csv, formatter) {
+	// separate csv stream into its components
+	return csv.split("\n")
+		.filter(function(line) {return line !== ""})  // exclude empty lines
+		.map(function(line) {
+			if (typeof formatter === "undefined") {
+				// return array of strings
+				return line.split(",");
+			} else {
+				// apply formatter to each element of line and return 
+				return line.split(",").map(formatter);
+			}
+		});
+}
+
+function parseGmt(gmt) {
+	return gmt.split("\n")
+		.filter(function(line) {return line !== ""})  // exclude empty lines
+		.map(function(line) {
+			return line.split("\t");
+		});
+}
+
+// Flatten nested arrays
+Array.prototype.flatten = function() {
+    var ret = [];
+    for (var i = 0; i < this.length; i++) {
+        if (Array.isArray(this[i])) {
+            ret = ret.concat(this[i].flatten());
+        } else {
+            ret.push(this[i]);
+        }
+    }
+    return ret;
+};
+
+Array.prototype.contains = function(v) {
+    for (var i = 0; i < this.length; i++) {
+        if(this[i] === v) return true;
+    }
+    return false;
+};
+
+Array.prototype.unique = function() {
+    var arr = [];
+    for (var i = 0; i < this.length; i++) {
+        if (!arr.contains(this[i])) {
+            arr.push(this[i]);
+        }
+    }
+    return arr; 
+}
+
+// Extension of indexOf which returns an array with all matches
+Array.prototype.indexOfAll = function(val) {
+	var indexes = [];
+	i = - 1;
+
+	while ((i = this.indexOf(val, i + 1)) !== -1) {
+		indexes.push(i);
+	}
+	return indexes;
+}
+
+
+// Check if numeric
+function isNumeric(n) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+}
+
+
+// data is array of array
+// First entry of data is assumed to be the field specifier
+function getColumn(data, field) {
+	// find index of the field
+	var k = data[0].indexOf(field);
+
+	// extract values to vector
+	var values = data
+		.slice(1)  // excludes first element of data
+		.map(function(row) {return row[k]});  // extract values
+	return(values);
+}
+
+// Look up perturbation related metadata from table.
+// Returns javascript object in the format fields: value.
+function getPertMetaData(meta_data, id) {
+
+	// Get the column numbers that describe the pertrubation.
+	var pert_pattern = /^pert_/;
+	var pert_fields_bool = meta_data[0].map(function(name) {
+		return pert_pattern.test(name);
+	});
+	var pert_cols = pert_fields_bool.indexOfAll(true);
+
+	// Find entry
+	var pert_row = getColumn(meta_data, "pert_id").indexOf(id);
+
+	// console.log(id, meta_data[pert_row + 1]);
+
+	// Format metadata into javascript object.
+	var out = {};
+
+	for (var i = 0; i < pert_cols.length; i++) {
+		var name = meta_data[0][pert_cols[i]];
+		var value = meta_data[pert_row + 1][pert_cols[i]];
+		out[name] = value;
+	}
+
+	return out;
+}
+
+// Selects, and returns, either field pert_iname or pert_desc.
+function pertDescrIname(meta_obj) {
+	if (meta_obj.pert_iname !== "NA") {
+		return meta_obj.pert_iname;
+	} else {
+		return meta_obj.pert_desc;
+	}
+}
+
+function applyTwice(arr1, arr2, fun) {
+	if (arr1.length !== arr2.length) {
+		console.log("WARNING: applyTwice() called with arrays of different lenght.")
+	}
+
+	var arr = new Array(arr1.length);
+
+	for (var i = 0; i < arr.length; i++) {
+		arr[i] = fun(arr1[i], arr2[i]);
+	}
+	return(arr);
+}
+
+
+function and(a, b) {return a && b}
+function or(a, b) {return a || b}
+
+// Callback function when gene set is selected. 
+function geneSelector(sel) {
+
+	if (sel.value === -1) {
+		d3.selectAll("svg").selectAll(".rect-p100")
+			.style("fill", function(d) {
+					if (isNaN(d.num)) {
+						return "white";
+					} else {
+						return(colorScale(d.num));
+					}
+				}
+			);
+	} else {
+
+	}
+
+	if (sel.value < 0) {
+		d3.selectAll("svg").selectAll(".rect-p100")
+			.style("fill", function(d) {
+					if (isNaN(d.num)) {
+						return "white";
+					} else {
+						return(colorScale(d.num));
+					}
+				}
+			);
+	} else {
+		// get gene list of selection
+		gene_sel = gene_lists[sel.value];  // contains 
+
+		// calculate feature ids that are included in selection
+		var sel_bool = getColumn(p100_meta_row, "pr_gene_symbol")
+			.map(function(symbol) {return gene_sel.contains(symbol)});
+
+		sel_index = sel_bool.indexOfAll(true);
+
+
+		// convert non-selections to corresponding greyscale of the same luminosity
+
+		d3.selectAll("svg").selectAll(".rect-p100")
+			.style("fill", function(d) {
+					if (sel.value === -1 || sel_index.contains(d.feature_id)) {
+						// in colors
+						if (isNaN(d.num)) {
+							return "white";
+						} else {
+							return(colorScale(d.num));
+						}
+					} else {
+						// greyscale
+						if (isNaN(d.num)) {
+							return "white";
+						} else {
+							return(grayScale(d.num));
+						}
+					}
+				}
+			);
+	}
+}
+
+// Constructs grid data with coordinates.
+// frame_size specifies the maximum
+// order can contain duplicates and specifies the layout.
+function buildGridData(numbers, order, frame_size) {
+
+	// Default order array
+	if (typeof order === "undefined" || order.constructor !== Array) {
+		order = d3.range(numbers.length);
+		console.log("WARNING: buildGridData called without an order array.");
+	}
+
+	// Calculate dimensionality of layout. The maximum number of cells
+	var dim = Math.ceil(Math.sqrt(numbers.length + 1));
+
+	// Calculate square size
+	var square_size = frame_size / dim;
+
+	// Pen (cursor) position
+	var pen_xpos = 0.0;
+	var pen_ypos = 0.0;
+
+	// gene symbols
+
+	// var gene_symbols = getColumn(meta_row, "pr_gene_symbol");
+	// console.log(gene_symbols);
+
+	var grid_data = [];
+	for (var i = 0; i < order.length; i++) {
+
+		// Check if new row should be initiated.
+		if (i !== 0 && i % dim == 0) {
+			// new row
+			pen_xpos = 0.0;
+			pen_ypos += square_size;
+		} 
+
+		// Construct data object
+		dobj = {};
+		dobj.x = pen_xpos;
+		dobj.y = pen_ypos;
+		dobj.size = square_size;
+		dobj.num = numbers[order[i]];  // data value
+		dobj.feature_id = order[i];  // for looking up metadata
+
+		grid_data.push(dobj);
+
+		// Advance cursor
+		pen_xpos += square_size;
+	}
+
+	return(grid_data);
+}
+
+
+// Trim svg element to bounday box
+function trimSvg(svg) {
+	var box = svg.node().getBBox();
+	svg.attr("width", box.width + box.x);
+	svg.attr("height", box.height + box.y);
+}
+
+// Global variables
+// -----------------------------------------------
+var p100_meta_col, p100_meta_row, p100_signatures, p100_layout, p100_cell_order, p100_pert_order;
+var gcp_meta_col, gcp_meta_row, gcp_signatures, gcp_layout, gcp_cell_order, gcp_pert_order;
+var pert_class;
+var gene_lists;
+
+// Global visualization options
+var colorScale = d3.scale.linear()
+	    .domain([-2.5, 0, 2.5])
+	    // .domain([-5, 0, 5])
+	    .clamp(true)  // color scale is clammed to boundary if values are out of range
+	    .range(["rgb(33,102,172)", "rgb(247,247,247)", "rgb(178,24,34)"]);  // RdBu from Colorbrewer	
+
+var colorScale2 = d3.scale.linear()
+	    .domain([-2.5, 0, 2.5])
+	    // .domain([-5, 0, 5])
+	    .clamp(true)  // color scale is clammed to boundary if values are out of range
+	    .range(["rgb(118,42,131)", "rgb(247,247,247)", "rgb(27,120,55)"]);  // RdBu from Colorbrewer	
+
+var grayScale = d3.scale.linear()
+	    .domain([-40.0, 0, 40.0])
+	    .clamp(true)  // color scale is clammed to boundary if values are out of range
+	    .range(["rgb(102,102,102)", "rgb(247,247,247)", "rgb(77,77,77)"]);  // RdBu from Colorbrewer	
+
+
+$(document).ready(function() {
+	// Get signature meta data
+	// Sample meta data
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/p100_meta_col_mean.csv",
+		dataType: "text",
+		success: function(data) {
+			p100_meta_col = parseCsv(data);
+		}
+	});
+
+	// Feature meta data
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/p100_meta_row_mean.csv",
+		dataType: "text",
+		success: function(data) {
+			p100_meta_row = parseCsv(data);
+		}
+	});
+
+	// Get signatures as array of array. Data matrix is transposed Data matrix is transposed
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/p100_zscore_mean.csv",
+		dataType: "text",
+		success: function(data) {
+			p100_signatures = parseCsv(data, Number);  // converts string to number
+		}
+	});
+
+	// Get tile order from Network2Canvas
+	// layout.text is a sequential layout specification with base sqrt(n)
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/p100_cor_mat_long.json",
+		// url: "p100mosaic/static/data/p100_abs_cor_mat_short.json",
+		dataType: "text",
+		success: function(data) {
+			p100_layout = JSON.parse(data);
+		}
+	});
+
+	// Get the perurbation order
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/comb_pert_order.txt",
+		dataType: "text",
+		success: function(data) {
+			p100_pert_order = data.split("\n").filter(function(x) {return x !== ""});
+		}
+	});
+
+	// Get cell line order
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/comb_cell_order.txt",
+		dataType: "text",
+		success: function(data) {
+			p100_cell_order = data.split("\n").filter(function(x) {return x !== ""});
+		}
+	});
+
+
+	// GCP
+	// -------------------------
+	// Get signature meta data
+	// Sample meta data
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/gcp_meta_col_mean.csv",
+		dataType: "text",
+		success: function(data) {
+			gcp_meta_col = parseCsv(data);
+		}
+	});
+
+	// Feature meta data
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/gcp_meta_row_mean.csv",
+		dataType: "text",
+		success: function(data) {
+			gcp_meta_row = parseCsv(data);
+		}
+	});
+
+	// Get signatures as array of array. Data matrix is transposed Data matrix is transposed
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/gcp_zscore_mean.csv",
+		dataType: "text",
+		success: function(data) {
+			gcp_signatures = parseCsv(data, Number);  // converts string to number
+		}
+	});
+
+	// Get tile order from Network2Canvas
+	// layout.text is a sequential layout specification with base sqrt(n)
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/gcp_cor_mat_long.json",
+		// url: "p100mosaic/static/data/p100_abs_cor_mat_short.json",
+		dataType: "text",
+		success: function(data) {
+			gcp_layout = JSON.parse(data);
+		}
+	});
+
+	// Get the perurbation order
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/gcp_pert_order.txt",
+		dataType: "text",
+		success: function(data) {
+			gcp_pert_order = data.split("\n").filter(function(x) {return x !== ""});
+		}
+	});
+
+	// Get cell line order
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/gcp_cell_order.txt",
+		dataType: "text",
+		success: function(data) {
+			gcp_cell_order = data.split("\n").filter(function(x) {return x !== ""});
+		}
+	});
+
+
+	// Perturbation class
+	$.ajax({
+		type: "GET",
+		url: "p100mosaic/static/data/pert_class.csv",
+		dataType: "text",
+		success: function(data) {
+			pert_class = parseCsv(data);
+			// data.split("\n").filter(function(x) {return x !== ""});
+		}
+	});
+
+
+
+	// GMT pathway data
+	$.ajax({
+		type: "GET",
+		// url: "p100mosaic/static/gmt/c2.cp.v5.0.symbols.gmt",
+		// url: "p100mosaic/static/gmt/c4.cgn.v5.0.symbols.gmt",
+		url: "p100mosaic/static/gmt/NCI-Nature.gmt",
+		// url: "p100mosaic/static/gmt/WikiPathways_2015.gmt",
+		// url: "p100mosaic/static/gmt/c5.mf.v5.0.symbols.gmt",
+		dataType: "text",
+		success: function(data) {
+			gene_lists = parseGmt(data);
+		}
+	});
+
+});
+
+// After all data has loaded
+$(document).ajaxStop(function() {
+
+	var tile_dim_px = 50;
+
+	// Get feature order from Network2Canvas
+	var p100_feature_ids = getColumn(p100_meta_row, "id");  // of data
+	var gcp_feature_ids = getColumn(gcp_meta_row, "id");
+
+	// The order is allowed to contain duplicates
+	var p100_order = p100_layout.texts.map(function(id) {
+		return p100_feature_ids.indexOf(id);
+	});
+
+	var gcp_order = gcp_layout.texts.map(function(id) {
+		return gcp_feature_ids.indexOf(id);
+	})
+
+	// Populate gene list selectors
+	var selector = $("#gene-selector");
+	for (var i = 0; i < gene_lists.length; i++) {
+		selector.append($("<option>")
+			.attr("value", i)
+			.text(gene_lists[i][0]));
+	}
+
+	// // find the minimum and maximum data value to determine the color scale
+	// var num_min = Math.min.apply(Math,
+	// 	signatures
+	// 		.flatten()
+	// 		.filter(function(x) {return !isNaN(x);})  // remove missing values
+	// 	);
+
+	// var num_max = Math.max.apply(Math,
+	// 	signatures
+	// 		.flatten()
+	// 		.filter(function(x) {return !isNaN(x);})  // remove missing values
+	// 	);
+
+
+	var tileTip = d3.tip()
+	    .attr("class", "d3-tip")
+	    .offset([-6, 0])
+	    .html(function(d) {return d;});
+
+	var attrTip = d3.tip()
+		.attr("class", "d3-tip")
+		.offset([-1, 6])
+		.direction("e")
+		.html(function(d) {
+			var html = "";
+			for (var key in d) {
+				html += key + ": " + d[key] + "<br>";
+			}
+			return html;
+		});
+
+	// Determine the coordinate categories and values
+	var p100_cell_ids = getColumn(p100_meta_col, "cell_id");
+	var cell_ids_unique = p100_cell_ids.unique();
+	var p100_pert_ids = getColumn(p100_meta_col, "pert_id");
+	var pert_ids_unique = p100_pert_ids.unique();
+
+	var gcp_cell_ids = getColumn(gcp_meta_col, "cell_id");
+	var gcp_pert_ids = getColumn(gcp_meta_col, "pert_id");
+
+
+
+	// Populate table of svg canvases.
+	var svg_table = $("#svg-container");
+
+	// Cell labels in headers
+	var header = $("<tr>").appendTo(svg_table);
+	header.append($("<th>"));  // empty
+	for (var i = 0; i < p100_cell_order.length; i++) {
+		header.append($("<th>").text(p100_cell_order[i]));
+	}
+	header.append($("<th>").text("cluster"));  // empty
+
+
+	// Loop over every experimental condition, outer loop.
+	for (var i = 0; i < p100_pert_order.length; i++) {
+		var pert_sel = p100_pert_order[i];
+
+		// add new row to table
+		var row = $("<tr>")
+			.appendTo(svg_table);
+
+		var th = $("<th>")
+			.attr("id", pert_sel)
+			.attr("class", "vertical-header-left")
+			.appendTo(row);
+
+		// Look up data for perturbation id
+		var pert_meta_data = getPertMetaData(p100_meta_col, pert_sel);
+
+		// Drug label
+		var label_svg = d3.select("#" + pert_sel)
+			.datum(pert_meta_data)
+			.append("svg");
+
+		var label_text = label_svg.append("text")
+			.attr("class", "label")
+			.attr("x", 10)
+			.attr("y", 10)
+			.text(pertDescrIname(pert_meta_data))
+			.call(attrTip)
+
+			.on("mouseover", function(d) {
+				attrTip.show(d);
+			})
+			.on("mouseout", function(d) {
+				attrTip.hide();
+			});
+
+		// Trim svg element to boundary box
+		trimSvg(label_svg);
+
+		// Experimental conditions, inncer loop.
+		for (var j = 0; j < p100_cell_order.length; j++) {
+			// find data entry that satisfies both selections
+			var cell_sel = p100_cell_order[j];
+			var table_entry = $("<td>")
+				.attr("class", "grid")
+				.appendTo(row);
+
+			// P100 canvas tiles.
+			// Data entries that satisfies both selection constraints
+			var p100_sel = applyTwice(
+				p100_cell_ids.map(function(id) {return id === cell_sel}),
+				p100_pert_ids.map(function(id) {return id === pert_sel}),
+			 	and);
+
+			if (p100_sel.indexOfAll(true).length > 1) {
+				console.log("WARNING: multiple signatures found for ", cell_sel, " ", pert_sel, ". Only one shown.");
+			}
+
+			var p100_k = p100_sel.indexOf(true);  // find first occurence
+
+			var svg_p100 = d3.selectAll(table_entry).append("svg")
+				.attr("width", tile_dim_px)
+				.attr("height", tile_dim_px)
+				.attr("class", "grid");
+
+			if (p100_k !== -1) {
+				// Data found
+				var rects = svg_p100.selectAll(".cell")
+					// .attr("class", "p100-cell")
+					// .data(buildGridData(signatures[205], d3.range(signatures[205].length), 400.0))
+					.data(buildGridData(p100_signatures[p100_k], p100_order, tile_dim_px))
+					.enter().append("svg:rect")
+					// .attr("class", "cell")
+					.attr("class", "rect-p100")
+					.attr("x", function(d) {return(d.x);})
+					.attr("y", function(d) {return(d.y);})
+					.attr("width", function(d) {return(d.size);})
+					.attr("height", function(d) {return(d.size);})
+					.style("fill", function(d) {
+							if (isNaN(d.num)) {
+								return "white";
+							} else {
+								return(colorScale(d.num));
+							}
+						}
+					)
+					.call(tileTip)  // initialize tip function to svg element
+					.on("mouseover", function(d) {
+						// tip.show(d.num);
+						tileTip.show(p100_meta_row[d.feature_id + 1][2] + ":" + p100_meta_row[d.feature_id + 1][8] + 
+							"<br>mean_zscore = " + d.num.toPrecision(3));
+					})
+					.on("mouseout", function(d) {
+						tileTip.hide();
+					})
+					;
+			}
+
+			// table_entry.append($("<div>").attr("class", "vertical-line"));
+
+			// GCP canvas tiles
+			var gcp_sel = applyTwice(
+				gcp_cell_ids.map(function(id) {return id === cell_sel}),
+				gcp_pert_ids.map(function(id) {return id === pert_sel}),
+			 	and)	;
+
+			if (gcp_sel.indexOfAll(true).length > 1) {
+				console.log("WARNING: multiple signatures found for ", cell_sel, " ", pert_sel, ". Only one shown.");
+			}
+
+			var gcp_k = gcp_sel.indexOf(true);  // find first occurence
+
+			var svg_gcp = d3.selectAll(table_entry).append("svg")
+				.attr("width", tile_dim_px)
+				.attr("height", tile_dim_px)
+				.attr("class", "grid");
+
+			if (gcp_k !== -1) {
+				var rects = svg_gcp.selectAll(".cell")
+					.data(buildGridData(gcp_signatures[gcp_k], gcp_order, tile_dim_px))
+					.enter().append("svg:rect")
+					// .attr("class", "cell")
+					.attr("x", function(d) {return(d.x);})
+					.attr("y", function(d) {return(d.y);})
+					.attr("width", function(d) {return(d.size);})
+					.attr("height", function(d) {return(d.size);})
+					.style("fill", function(d) {
+							if (isNaN(d.num)) {
+								return "white";
+							} else {
+								return(colorScale2(d.num));
+							}
+						}
+					)
+					.call(tileTip)  // initialize tip function to svg element
+					.on("mouseover", function(d) {
+						// tip.show(d.num);
+						tileTip.show(gcp_meta_row[d.feature_id + 1][3] +
+							"<br> mean_zscore = " + d.num.toPrecision(3));
+					})
+					.on("mouseout", function(d) {
+						tileTip.hide();
+					})
+					;
+
+			}
+
+		}
+
+		// Cluster field of row
+
+		// look up class
+		var pert_ids = getColumn(pert_class, "pert_id");
+
+		var pert_class_k = pert_ids.indexOf(pert_sel);
+
+		row.append($("<th>")
+			.attr("class", "vertical-header-right")
+			.html(
+				pert_class[pert_class_k+1][1]
+				// pert_class[pert_class_k+1][1] + ",   " +
+				// pert_class[pert_class_k+1][2] + ",   " +
+				// pert_class[pert_class_k+1][3]
+		));
+	}
+});
+
+</script>
+
+
+<div id="main">
+	<h2>Mosaic visualization of phosphosite and global chromatin signatures after chemical perturbations</h2>
+	<p>Data are generated on the <a href="https://panoramaweb.org/labkey/project/LINCS/begin.view">P100 and GCP platforms</a> and analyzed using a within-plate z-score. Triplicate z-score signatures are averaged. The layout of the tiles/canvases is determined by a self-organizing map algorithm (<a href="http://www.maayanlab.net/N2C">Network2Canvas</a>). The algorithm tries to position MS peptide measurements which are corregulated next to each other. Both cell lines (columns) and chemical perturbagens (rows) are ordered by hierarchical clustering taking into account both P100 and GCP.</p>
+	<p>On the left is the <b>P100</b> (100 phosphosites) where <span class="red">red</span> is up and <span class="blue">blue</span> is down. On the right is the <b>GCP</b> (global chromatin profiling assay) where <span class="green">green</span> is up and <span class="purple">purple</span> is down.</p>
+
+	<label>
+		Filter P100 by NCI pathways
+
+		<select id="gene-selector" name="gene_list" onchange="geneSelector(this)">
+			<option value="-1">No filter</option>
+			<!-- <options value="3">KEGG_PENTOSE_AND_GLUCURONATE_INTERCONVERSIONS</options> -->
+		</select>
+	</label>
+	<br><br>
+
+	<table id="svg-container"></table>
+</div>
+
+</body>
+</html>
