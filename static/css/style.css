@@ -40,7 +40,7 @@ table th.vertical-header-right {
 }
 
 
-div.panel {
+div.panel-dark {
 	background-color: rgba(0,0,0,0.5);
 	color: white;
 	border-radius: 2px;
@@ -76,10 +76,19 @@ div.border-container {
 }
 
 
-#sidebar {
+div#sidebar {
 	background-color: rgba(0,0,0,0.05);
 	z-index: 1;
+	position: absolute;
 	/*width: 100%;*/
+}
+
+
+#gene-selector {
+	/*overflow: hidden;*/
+	/*max-width: 100%;*/
+	/*display: block;*/
+	width: 100px;
 }
 
 /*#sidebar.affix-top {
@@ -170,3 +179,7 @@ div.border-container {
   top: 50%;
   left: 100%;
 }
+
+/*footer {
+	background-color: rgb(220, 220, 220);
+}*/
