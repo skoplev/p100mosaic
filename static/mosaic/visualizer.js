@@ -140,6 +140,11 @@ function applyTwice(arr1, arr2, fun) {
 function and(a, b) {return a && b}
 function or(a, b) {return a || b}
 
+var grayScale = d3.scale.linear()
+	    .domain([-40.0, 0, 40.0])
+	    .clamp(true)  // color scale is clammed to boundary if values are out of range
+	    .range(["rgb(102,102,102)", "rgb(247,247,247)", "rgb(77,77,77)"]);  // RdBu from Colorbrewer	
+
 // Callback function when gene set is selected. 
 function geneSelector(sel) {
 
@@ -214,7 +219,7 @@ function buildGridData(numbers, order, frame_size) {
 	}
 
 	// Calculate dimensionality of layout. The maximum number of cells
-	var dim = Math.ceil(Math.sqrt(numbers.length + 1));
+	var dim = Math.ceil(Math.sqrt(numbers.length));
 
 	// Calculate square size
 	var square_size = frame_size / dim;

@@ -56,10 +56,10 @@ var colorScale2 = d3.scale.linear()
 	    .clamp(true)  // color scale is clammed to boundary if values are out of range
 	    .range(["rgb(118,42,131)", "rgb(247,247,247)", "rgb(27,120,55)"]);  // RdBu from Colorbrewer	
 
-var grayScale = d3.scale.linear()
-	    .domain([-40.0, 0, 40.0])
-	    .clamp(true)  // color scale is clammed to boundary if values are out of range
-	    .range(["rgb(102,102,102)", "rgb(247,247,247)", "rgb(77,77,77)"]);  // RdBu from Colorbrewer	
+var monoScale = d3.scale.linear()
+	.domain([0.0, 10.0])
+	.clamp(true)
+	.range(["rgb(255,255,255)", "rgb(0,0,0)"]);
 
 
 $(document).ready(function() {
@@ -259,11 +259,14 @@ $(document).ajaxStop(function() {
 	// 		.filter(function(x) {return !isNaN(x);})  // remove missing values
 	// 	);
 
-
 	var tileTip = d3.tip()
 	    .attr("class", "d3-tip")
 	    .offset([-6, 0])
 	    .html(function(d) {return d;});
+
+	// var legendTileTip = d3.tip()
+	// 	.attr("class", "d3-tip")
+	// 	.html(function(d) {return d;})
 
 	var attrTip = d3.tip()
 		.attr("class", "d3-tip")
@@ -277,6 +280,156 @@ $(document).ajaxStop(function() {
 			return html;
 		});
 
+
+	// Construct sidebar panel
+	var sidebar = d3.select("#sidebar");
+
+	sidebar.append("h3").html("Selection");
+
+	sidebar.append("h4").html("Cell line");
+
+	sidebar.append("div")
+		.attr("id", "cell_panel")
+		.attr("class", "panel")
+		.html("none");
+
+	sidebar.append("h4").html("Perturbation");
+
+	sidebar.append("div")
+		.attr("id", "pert_panel")
+		.attr("class", "panel")
+		.html("none");
+
+	// P100 selection panel
+	sidebar.append("h4").html("P100");
+
+	// Canvas of output from Network2Canvas
+	var p100_svg_legend = sidebar.append("div")
+			.attr("class", "border-container")
+			.append("svg")
+				.attr("width", 2*tile_dim_px)
+				.attr("height", 2*tile_dim_px)
+				.attr("class", "grid");
+
+
+	p100_svg_legend.selectAll(".cell")
+		.data(buildGridData(p100_layout.weights, order=d3.range(p100_layout.weights.length), 2*tile_dim_px))
+
+		.enter().append("svg:rect")
+		.attr("class", "legend")
+		.attr("id", function(d) {return("legend_1_" + getColumn(p100_meta_row, "id").indexOf(p100_layout.texts[d.feature_id]));})
+		// .attr("id", function(d) {return(p100_layout.texts[d.feature_id]);})
+		.attr("x", function(d) {return(d.x);})
+		.attr("y", function(d) {return(d.y);})
+		.attr("width", function(d) {return(d.size);})
+		.attr("height", function(d) {return(d.size);})
+		.style("fill", function(d) {
+				if (isNaN(d.num)) {
+					return "white";
+				} else {
+					return(monoScale(d.num));
+				}
+			}
+		)
+		.on("click", function(d) {
+			// get probe id
+			var id = p100_layout.texts[d.feature_id]
+
+			console.log(id);
+
+			// Look up metadata 
+			var meta_k = getColumn(p100_meta_row, "id").indexOf(id);
+
+			// update panel
+			d3.select("#meta_panel1").html(
+				p100_meta_row[meta_k + 1][2] + "<br>" +
+				p100_meta_row[meta_k + 1][8]);
+
+			// Unselect all other selections
+			d3.selectAll(".selected")
+				.classed("selected", false)
+				.attr("style", function(d) {
+					return("fill: " + monoScale(d.num) + ";");
+				});
+
+			// Select square
+			d3.selectAll("#legend_1_" + meta_k)
+				.classed("selected", true)
+				.attr("style", function(d) {
+					// return("fill: " + monoScale(d.num) + "; stroke: black; stroke-width: 2px;")
+					return("fill: rgb(31,120,180);")
+				});
+		});
+
+	// Sidebar panel for meta data
+	sidebar.append("div")
+		.attr("id", "meta_panel1")
+		.attr("class", "panel")
+		.html("meta info");
+
+	// GCP selection panel
+	sidebar.append("h4").html("GCP");
+
+	var gcp_svg_legend = sidebar.append("div")
+		.attr("class", "border-container")
+		.append("svg")
+			.attr("width", 2*tile_dim_px)
+			.attr("height", 2*tile_dim_px)
+			.attr("class", "grid");
+
+	gcp_svg_legend.selectAll(".cell")
+		.data(buildGridData(gcp_layout.weights, order=d3.range(gcp_layout.weights.length), 2*tile_dim_px))
+
+		.enter().append("svg:rect")
+		.attr("class", "legend")
+		.attr("id", function(d) {return("legend_2_" + getColumn(gcp_meta_row, "id").indexOf(gcp_layout.texts[d.feature_id]));})
+		.attr("x", function(d) {return(d.x);})
+		.attr("y", function(d) {return(d.y);})
+		.attr("width", function(d) {return(d.size);})
+		.attr("height", function(d) {return(d.size);})
+		.style("fill", function(d) {
+				if (isNaN(d.num)) {
+					return "white";
+				} else {
+					return(monoScale(d.num));
+				}
+			}
+		)
+		.on("click", function(d) {
+			// get probe id
+			var id = gcp_layout.texts[d.feature_id]
+			console.log(id);
+
+			// Look up metadata 
+			var meta_k = getColumn(gcp_meta_row, "id").indexOf(id);
+
+			// update panel
+			d3.select("#meta_panel2").html(
+				gcp_meta_row[meta_k + 1][3]);
+
+			// Unselect all other selections
+			d3.selectAll(".selected")
+				.classed("selected", false)
+				.attr("style", function(d) {
+					return("fill: " + monoScale(d.num) + ";");
+				});
+
+			// Select square
+			d3.selectAll("#legend_2_" + meta_k)
+				.classed("selected", true)
+				.attr("style", function(d) {
+					// return("fill: " + monoScale(d.num) + "; stroke: black; stroke-width: 2px;")
+					return("fill: rgb(162,78,163);")
+				});
+		});
+
+	sidebar.append("div")
+		.attr("id", "meta_panel2")
+		.attr("class", "panel")
+		.html("meta info");
+
+
+
 	// Determine the coordinate categories and values
 	var p100_cell_ids = getColumn(p100_meta_col, "cell_id");
 	var cell_ids_unique = p100_cell_ids.unique();
@@ -289,32 +442,56 @@ $(document).ajaxStop(function() {
 
 
 	// Populate table of svg canvases.
-	var svg_table = $("#svg-container");
+	var svg_table = $("#svg-table");
 
 	// Cell labels in headers
-	var header = $("<tr>").appendTo(svg_table);
+	var header = $("<tr>").appendTo(svg_table.append($("<thead>")));
+
+	// svg_table
 	header.append($("<th>"));  // empty
 	for (var i = 0; i < p100_cell_order.length; i++) {
 		header.append($("<th>").text(p100_cell_order[i]));
 	}
 	header.append($("<th>").text("cluster"));  // empty
 
+	// var header = $("#svg-table > thead").clone();
+	// var fixed_header = $("#header-fixed").append(header.clone());
+
+	// console.log(fixed_header);
+
+	// svg_table.append($("<tbody>"))
+	// var svg_table_body = $("<table>");
 
 	// Loop over every experimental condition, outer loop.
 	for (var i = 0; i < p100_pert_order.length; i++) {
 		var pert_sel = p100_pert_order[i];
 
+		// Look up data for perturbation id
+		var pert_meta_data = getPertMetaData(p100_meta_col, pert_sel);
+
 		// add new row to table
 		var row = $("<tr>")
 			.appendTo(svg_table);
 
+		// Bind data to row
+		d3.selectAll(row)
+			.datum(pert_sel)
+			.on("click", function(d) {
+				// todo
+				// var html = d;
+
+				// var p100_k = getColumn(p100_meta_row, "id").indexOf(d);
+				// Look up id
+				d3.select("#pert_panel").html(d + "<br>" + pertDescrIname(getPertMetaData(p100_meta_col, d)));
+					// pert_meta_data));
+		});
+
+		// add row labels
 		var th = $("<th>")
 			.attr("id", pert_sel)
 			.attr("class", "vertical-header-left")
 			.appendTo(row);
 
-		// Look up data for perturbation id
-		var pert_meta_data = getPertMetaData(p100_meta_col, pert_sel);
 
 		// Drug label
 		var label_svg = d3.select("#" + pert_sel)
@@ -329,6 +506,7 @@ $(document).ajaxStop(function() {
 			.call(attrTip)
 
 			.on("mouseover", function(d) {
+
 				attrTip.show(d);
 			})
 			.on("mouseout", function(d) {
@@ -346,6 +524,15 @@ $(document).ajaxStop(function() {
 				.attr("class", "grid")
 				.appendTo(row);
 
+			// Bind cell line data to each table entry
+			d3.selectAll(table_entry)
+				.datum(cell_sel)
+				.on("click", function(d) {
+					d3.select("#cell_panel").html(d);
+					// console.log(d);
+					}
+				);
+
 			// P100 canvas tiles.
 			// Data entries that satisfies both selection constraints
 			var p100_sel = applyTwice(
@@ -361,11 +548,11 @@ $(document).ajaxStop(function() {
 
 			var svg_p100 = d3.selectAll(table_entry)
 				.append("div")
-				.attr("class", "border-container")
+					.attr("class", "border-container")
 					.append("svg")
-					.attr("width", tile_dim_px)
-					.attr("height", tile_dim_px)
-					.attr("class", "grid");
+						.attr("width", tile_dim_px)
+						.attr("height", tile_dim_px)
+						.attr("class", "grid");
 
 			if (p100_k !== -1) {
 				// Data found
@@ -389,15 +576,38 @@ $(document).ajaxStop(function() {
 						}
 					)
 					.call(tileTip)  // initialize tip function to svg element
+					.on("click", function(d) {
+						// Unselect previous selection in selection canvas.
+						d3.selectAll(".selected")
+							.classed("selected", false)
+							.attr("style", function(d) {
+								return("fill: " + monoScale(d.num) + ";");
+							});
+
+						// find legend grid of 
+						d3.selectAll("#legend_1_" + d.feature_id)
+							.classed("selected", true)
+							.attr("style", function(d) {
+								// return("fill: " + monoScale(d.num) + "; stroke: black; stroke-width: 2px;")
+								return("fill: rgb(31,120,180);")
+							});
+
+						// Update meta panel
+						d3.select("#meta_panel1").html(
+
+							p100_meta_row[d.feature_id + 1][2] + "<br>" +
+							// p100_meta_row[0][3] + ": " + p100_meta_row[d.feature_id + 1][3] + "<br>" +
+							p100_meta_row[d.feature_id + 1][8]
+							);
+					})
 					.on("mouseover", function(d) {
-						// tip.show(d.num);
-						tileTip.show(p100_meta_row[d.feature_id + 1][2] + ":" + p100_meta_row[d.feature_id + 1][8] + 
+						tileTip.show(
+							p100_meta_row[d.feature_id + 1][2] + ":" + p100_meta_row[d.feature_id + 1][8] + 
 							"<br>mean_zscore = " + d.num.toPrecision(3));
 					})
 					.on("mouseout", function(d) {
 						tileTip.hide();
-					})
-					;
+					});
 			}
 
 			// table_entry.append($("<div>").attr("class", "vertical-line"));
@@ -416,11 +626,11 @@ $(document).ajaxStop(function() {
 
 			var svg_gcp = d3.selectAll(table_entry)
 				.append("div")
-				.attr("class", "border-container")
+					.attr("class", "border-container")
 					.append("svg")
-					.attr("width", tile_dim_px)
-					.attr("height", tile_dim_px)
-					.attr("class", "grid");
+						.attr("width", tile_dim_px)
+						.attr("height", tile_dim_px)
+						.attr("class", "grid");
 
 			if (gcp_k !== -1) {
 				var rects = svg_gcp.selectAll(".cell")
@@ -448,8 +658,26 @@ $(document).ajaxStop(function() {
 					.on("mouseout", function(d) {
 						tileTip.hide();
 					})
-					;
+					.on("click", function(d) {
+						// Unselect previous selection in selection canvas.
+						d3.selectAll(".selected")
+							.classed("selected", false)
+							.attr("style", function(d) {
+								return("fill: " + monoScale(d.num) + ";");
+							});
 
+						// find legend grid of 
+						d3.selectAll("#legend_2_" + d.feature_id)
+							.classed("selected", true)
+							.attr("style", function(d) {
+								// return("fill: " + monoScale(d.num) + "; stroke: black; stroke-width: 2px;")
+								return("fill: rgb(162,78,163);")
+							});
+
+						// Update meta panel
+						d3.select("#meta_panel2").html(
+							gcp_meta_row[d.feature_id + 1][3]);
+					});
 			}
 
 		}
@@ -470,12 +698,14 @@ $(document).ajaxStop(function() {
 				// pert_class[pert_class_k+1][3]
 		));
 	}
-});
 
+
+});
 
 $('#sidebar').affix({
   offset: {
-    top: $('header').height()
+  	top: 200
+    // top: $('header').height()
   }
 }); 
 
@@ -501,14 +731,16 @@ $('#sidebar').affix({
 	<!-- <br><br> -->
 	<div class="container-fluid">
 		<div class="row">
-			<div class="col-xs-2">
+
+			<div class="col-xs-1">
 				<div class="affix" id="sidebar">
-					sidebar
+				 <!-- <h4>Sidebar</h4> -->
 				</div>
 			</div>
-			<div class="col-xs-10">
+
+			<div class="col-xs-11">
 				<!--  -->
-				<table id="svg-container"></table>
+				<table id="svg-table"></table>
 			</div>
 
 		</div>
@@ -516,6 +748,8 @@ $('#sidebar').affix({
 		
 
 </div>
+
+<!-- <table id="header-fixed"></table> -->
 
 </body>
 </html>
