@@ -335,7 +335,6 @@ $(document).ajaxStop(function() {
 			// get probe id
 			var id = p100_layout.texts[d.feature_id]
 
-			console.log(id);
 
 			// Look up metadata 
 			var meta_k = getColumn(p100_meta_row, "id").indexOf(id);
@@ -398,7 +397,6 @@ $(document).ajaxStop(function() {
 		.on("click", function(d) {
 			// get probe id
 			var id = gcp_layout.texts[d.feature_id]
-			console.log(id);
 
 			// Look up metadata 
 			var meta_k = getColumn(gcp_meta_row, "id").indexOf(id);
@@ -457,7 +455,6 @@ $(document).ajaxStop(function() {
 	// var header = $("#svg-table > thead").clone();
 	// var fixed_header = $("#header-fixed").append(header.clone());
 
-	// console.log(fixed_header);
 
 	// svg_table.append($("<tbody>"))
 	// var svg_table_body = $("<table>");
@@ -529,7 +526,6 @@ $(document).ajaxStop(function() {
 				.datum(cell_sel)
 				.on("click", function(d) {
 					d3.select("#cell_panel").html(d);
-					// console.log(d);
 					}
 				);
 
