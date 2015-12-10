@@ -18,23 +18,23 @@ table#svg-table {
 
 }
 
-table td.grid {
+table#svg-table td.grid {
 	padding: 3px;
 	font-size: 0;
 	white-space: nowrap;
 }
 
-table th {
+table#svg-table th {
 	font-size: 9px;
 	/*font-size: 100%;*/
 	color: rgb(100, 100, 100);
 }
 
-table th.vertical-header-left {
+table#svg-table th.vertical-header-left {
 	text-align: right;
 }
 
-table th.vertical-header-right {
+table#svg-table th.vertical-header-right {
 	text-align: left;
 
 }
