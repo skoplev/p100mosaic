@@ -100,8 +100,6 @@ function getPertMetaData(meta_data, id) {
 	// Find entry
 	var pert_row = getColumn(meta_data, "pert_id").indexOf(id);
 
-	// console.log(id, meta_data[pert_row + 1]);
-
 	// Format metadata into javascript object.
 	var out = {};
 
@@ -229,10 +227,6 @@ function buildGridData(numbers, order, frame_size) {
 	var pen_ypos = 0.0;
 
 	// gene symbols
-
-	// var gene_symbols = getColumn(meta_row, "pr_gene_symbol");
-	// console.log(gene_symbols);
-
 	var grid_data = [];
 	for (var i = 0; i < order.length; i++) {
 

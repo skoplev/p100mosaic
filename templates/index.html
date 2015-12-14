@@ -12,7 +12,8 @@
 <script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
 
 <!-- D3-tip -->
-<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+<!-- <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script> -->
+<script src="p100mosaic/static/Caged-d3-tip-07cf158/index.js"></script>
 
 <!-- Latest compiled and minified CSS -->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
@@ -234,7 +235,6 @@ $(document).ajaxStop(function() {
 		return gcp_feature_ids.indexOf(id);
 	})
 
-
 	// // find the minimum and maximum data value to determine the color scale
 	// var num_min = Math.min.apply(Math,
 	// 	signatures
@@ -307,7 +307,6 @@ $(document).ajaxStop(function() {
 		.enter().append("svg:rect")
 		.attr("class", "legend")
 		.attr("id", function(d) {return("legend_1_" + getColumn(p100_meta_row, "id").indexOf(p100_layout.texts[d.feature_id]));})
-		// .attr("id", function(d) {return(p100_layout.texts[d.feature_id]);})
 		.attr("x", function(d) {return(d.x);})
 		.attr("y", function(d) {return(d.y);})
 		.attr("width", function(d) {return(d.size);})
@@ -344,7 +343,6 @@ $(document).ajaxStop(function() {
 			d3.selectAll("#legend_1_" + meta_k)
 				.classed("selected", true)
 				.attr("style", function(d) {
-					// return("fill: " + monoScale(d.num) + "; stroke: black; stroke-width: 2px;")
 					return("fill: rgb(31,120,180);")
 				});
 		});
@@ -444,8 +442,6 @@ $(document).ajaxStop(function() {
 	var gcp_cell_ids = getColumn(gcp_meta_col, "cell_id");
 	var gcp_pert_ids = getColumn(gcp_meta_col, "pert_id");
 
-
-
 	// Populate table of svg canvases.
 	var svg_table = $("#svg-table");
 
@@ -458,13 +454,6 @@ $(document).ajaxStop(function() {
 		header.append($("<th>").text(p100_cell_order[i]));
 	}
 	header.append($("<th>").text("cluster"));  // empty
-
-	// var header = $("#svg-table > thead").clone();
-	// var fixed_header = $("#header-fixed").append(header.clone());
-
-
-	// svg_table.append($("<tbody>"))
-	// var svg_table_body = $("<table>");
 
 	// Loop over every experimental condition, outer loop.
 	for (var i = 0; i < p100_pert_order.length; i++) {
@@ -481,13 +470,8 @@ $(document).ajaxStop(function() {
 		d3.selectAll(row)
 			.datum(pert_sel)
 			.on("click", function(d) {
-				// todo
-				// var html = d;
-
-				// var p100_k = getColumn(p100_meta_row, "id").indexOf(d);
 				// Look up id
 				d3.select("#pert_panel").html(d + "<br>" + pertDescrIname(getPertMetaData(p100_meta_col, d)));
-					// pert_meta_data));
 		});
 
 		// add row labels
@@ -591,7 +575,6 @@ $(document).ajaxStop(function() {
 						d3.selectAll("#legend_1_" + d.feature_id)
 							.classed("selected", true)
 							.attr("style", function(d) {
-								// return("fill: " + monoScale(d.num) + "; stroke: black; stroke-width: 2px;")
 								return("fill: rgb(31,120,180);")
 							});
 
@@ -599,7 +582,6 @@ $(document).ajaxStop(function() {
 						d3.select("#meta_panel1").html(
 
 							p100_meta_row[d.feature_id + 1][2] + "<br>" +
-							// p100_meta_row[0][3] + ": " + p100_meta_row[d.feature_id + 1][3] + "<br>" +
 							p100_meta_row[d.feature_id + 1][8]
 							);
 					})
@@ -612,8 +594,6 @@ $(document).ajaxStop(function() {
 						tileTip.hide();
 					});
 			}
-
-			// table_entry.append($("<div>").attr("class", "vertical-line"));
 
 			// GCP canvas tiles
 			var gcp_sel = applyTwice(
@@ -654,7 +634,6 @@ $(document).ajaxStop(function() {
 					)
 					.call(tileTip)  // initialize tip function to svg element
 					.on("mouseover", function(d) {
-						// tip.show(d.num);
 						tileTip.show(gcp_meta_row[d.feature_id + 1][3] +
 							"<br> mean_zscore = " + d.num.toPrecision(3));
 					})
@@ -702,10 +681,8 @@ $(document).ajaxStop(function() {
 		));
 	}
 
-
 	// Sticky sidebar. Find top of html page.
 	sticky_top = $("#sidebar").offset().top;
-
 });
 
 
@@ -723,13 +700,14 @@ $(window).scroll(function() {
 
 <div class="container" role="main" id="main">
 	<h1>Mosaic visualization of targeted phosphoproteomics and post-translation histone modifications after chemical perturbation of cancer cell lines</h1>
-
+	<br>
+	<!-- <hr> -->
 	<div class="container">
 		<div class="row">
 
-			<div class="col-xs-12 col-sm-8 col-md-6">
+			<div class="col-xs-12 col-sm-7 col-md-6">
 				<div class="panel panel-default">
-						<div class="panel-heading"><h4>Description</h4></div>
+						<div class="panel-heading">Description</div>
 					 	<!-- <h2>Description</h2> -->
 					 	<div class="panel-body">
 					 		
@@ -740,53 +718,59 @@ $(window).scroll(function() {
 				</div>
 			</div>
 
-			<div class="col-xs-12 col-sm-4 col-md-6">
+			<div class="col-xs-12 col-sm-5 col-md-6">
 				<div class="panel panel-default">
-					<div class="panel-heading"><h4>Access data</h4></div>
+					<div class="panel-heading">Access data</div>
 
 					<div class="panel-body">
-						<p>In standardized .csv format. Main data are stored in matrices (MS peptides in rows and experimental conditions in columns). Associated metadata for the rows and columns are stored in seperate tables. The dimensions of the metadata tables match the main data matrices.
+						<p>In standardized .csv format. Main data are stored in matrices (MS peptides in rows and experimental conditions in columns). Associated metadata for the rows and columns are stored in seperate tables. The dimensions of the metadata tables match the main data matrices. Missing data are encoded by NA.
 						</p>
 
-						<table class="table">
-							<tr>
-								<thead>
-									<tr>
-										<th>P100</th>
-										<th>GCP</th>
-									</tr>
-								</thead>
-								<td>
-									<a href="p100mosaic/static/stdData/p100_data.csv" target="_blank">main data <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span></a>
-								</td>
-								<td>
-									<a href="p100mosaic/static/stdData/gcp_data.csv" target="_blank">main data <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span></a>
-								</td>
-							</tr>
-							<tr>
-								<td>
-									<a href="p100mosaic/static/stdData/p100_meta_col.csv" target="_blank">column metadata <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span></a>
-								</td>
+						<div class="panel panel-default">
+							<div class="panel-heading">.csv files</div>
+							<div class="panel-body">
+								<table class="table table-condensed">
+									<thead>
+										<tr>
+											<th>P100</th>
+											<th>GCP</th>
+										</tr>
+									</thead>
+									<tbody >
+										<tr>
+											<td>
+												<a href="p100mosaic/static/stdData/p100_data.csv" target="_blank">main data <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span></a>
+											</td>
+											<td>
+												<a href="p100mosaic/static/stdData/gcp_data.csv" target="_blank">main data <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span></a>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<a href="p100mosaic/static/stdData/p100_meta_col.csv" target="_blank">column metadata <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span></a>
+											</td>
 
-								<td>
-									<a href="p100mosaic/static/stdData/gcp_meta_col.csv" target="_blank">column metadata <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span></a>
-								</td>
-							</tr>
-							<tr>
-								<td>
-									<a href="p100mosaic/static/stdData/p100_meta_row.csv" target="_blank">row metadata <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span></a>
-								</td>
+											<td>
+												<a href="p100mosaic/static/stdData/gcp_meta_col.csv" target="_blank">column metadata <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span></a>
+											</td>
+										</tr>
+										<tr>
+											<td>
+												<a href="p100mosaic/static/stdData/p100_meta_row.csv" target="_blank">row metadata <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span></a>
+											</td>
 
-								<td>
-									<a href="p100mosaic/static/stdData/gcp_meta_row.csv" target="_blank">row metadata <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span></a>
-								</td>
-							</tr>
-						</table>
+											<td>
+												<a href="p100mosaic/static/stdData/gcp_meta_row.csv" target="_blank">row metadata <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span></a>
+											</td>
+										</tr>
+									</tbody>
+								</table>
+
+							</div>
+						</div>
 
 					</div>
 				</div>
-
-				<!-- <h2>Access data</h2> -->
 			</div>
 		</div>
 	</div>
@@ -794,7 +778,7 @@ $(window).scroll(function() {
 	<div class="container-fluid">
 		<div class="row">
 		 	<h2>Mosaic visualization</h2>
-		 	<p class="text-muted">Hover or click on tiles for more information.</p>
+		 	<p class="text-muted">Hover or click on tiles for more information. Note that tooltips may not work properly in Safari and IE.</p>
 			<div class="col-xs-1">
 				<div id="sidebar"></div>
 			</div>
