@@ -475,7 +475,7 @@ $(document).ajaxStop(function() {
 			.datum(pert_sel)
 			.on("click", function(d) {
 				// Look up id
-				d3.select("#pert_panel").html(d + "<br>" + pertDescrIname(getPertMetaData(p100_meta_col, d)));
+				d3.select("#pert_panel").html(d + "<br>" + pertDescrIname(getPertMetaData(p100_data.meta_col, d)));
 		});
 
 		// add row labels
