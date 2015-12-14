@@ -31,7 +31,7 @@
 
 <script type="text/javascript">
 
-// Global variables
+// GLOBAL VARIABLES
 // -----------------------------------------------
 var p100_data = {};  // data for p100, including .meta_col .meta_row .signatures .layout .cell_order .pert_order
 var gcp_data = {};   // data for GCP
@@ -40,6 +40,10 @@ var pert_class;
 var gene_lists;
 
 var sticky_top;  // global sticky top, pixel offset. For scrolling sidebar
+
+// SVG canvas dimension
+var tile_dim_px = 50;
+
 
 // Global visualization options
 var colorScale = d3.scale.linear()
@@ -60,8 +64,193 @@ var monoScale = d3.scale.linear()
 	.range(["rgb(255,255,255)", "rgb(0,0,0)"]);
 
 
+// Tip elements used by D3-tip
+var tileTip = d3.tip()
+    .attr("class", "d3-tip")
+    .offset([-6, 0])
+    .html(function(d) {return d;});
+
+var attrTip = d3.tip()
+	.attr("class", "d3-tip")
+	.offset([-1, 6])
+	.direction("e")
+	.html(function(d) {
+		var html = "";
+		for (var key in d) {
+			html += key + ": " + d[key] + "<br>";
+		}
+		return html;
+	});
+
+
+// Construct sidebar with provided canvas dimension in pixels.
+function makeSidebar(tile_dim_px) {
+	// Construct sidebar panel
+	var sidebar = d3.select("#sidebar");
+
+	sidebar.append("h3").html("Selection");
+
+	sidebar.append("h4").html("Cell line");
+
+	sidebar.append("div")
+		.attr("id", "cell_panel")
+		.attr("class", "panel-dark")
+		.html("none");
+
+	sidebar.append("h4").html("Perturbation");
+
+	sidebar.append("div")
+		.attr("id", "pert_panel")
+		.attr("class", "panel-dark")
+		.html("none");
+
+	// P100 selection panel
+	sidebar.append("h4").html("P100");
+
+	// Canvas of output from Network2Canvas
+	var p100_svg_legend = sidebar.append("div")
+			.attr("class", "border-container")
+			.append("svg")
+				.attr("width", tile_dim_px)
+				.attr("height", tile_dim_px)
+				.attr("class", "grid");
+
+	// SVG legend grid
+	p100_svg_legend.selectAll(".cell")
+		.data(buildGridData(p100_data.layout.weights, order=d3.range(p100_data.layout.weights.length), tile_dim_px))
+		.enter().append("svg:rect")
+		.attr("class", "legend")
+		.attr("id", function(d) {return("legend_1_" + getColumn(p100_data.meta_row, "id").indexOf(p100_data.layout.texts[d.feature_id]));})
+		.attr("x", function(d) {return(d.x);})
+		.attr("y", function(d) {return(d.y);})
+		.attr("width", function(d) {return(d.size);})
+		.attr("height", function(d) {return(d.size);})
+		.style("fill", function(d) {
+				if (isNaN(d.num)) {
+					return "white";
+				} else {
+					return(monoScale(d.num));
+				}
+			}
+		)
+		.on("click", function(d) {
+			// get probe id
+			var id = p100_data.layout.texts[d.feature_id]
+
+
+			// Look up metadata 
+			var meta_k = getColumn(p100_data.meta_row, "id").indexOf(id);
+
+			// update panel
+			d3.select("#meta_panel1").html(
+				p100_data.meta_row[meta_k + 1][2] + "<br>" +
+				p100_data.meta_row[meta_k + 1][8]);
+
+			// Unselect all other selections
+			d3.selectAll(".selected")
+				.classed("selected", false)
+				.attr("style", function(d) {
+					return("fill: " + monoScale(d.num) + ";");
+				});
+
+			// Select square
+			d3.selectAll("#legend_1_" + meta_k)
+				.classed("selected", true)
+				.attr("style", function(d) {
+					return("fill: rgb(31,120,180);")
+				});
+		});
+
+	// Sidebar panel for meta data
+	sidebar.append("div")
+		.attr("id", "meta_panel1")
+		.attr("class", "panel-dark")
+		.html("meta info");
+
+	// GCP selection panel
+	sidebar.append("h4").html("GCP");
+
+	var gcp_svg_legend = sidebar.append("div")
+		.attr("class", "border-container")
+		.append("svg")
+			.attr("width", tile_dim_px)
+			.attr("height", tile_dim_px)
+			.attr("class", "grid");
+
+	// GCP legend grid
+	gcp_svg_legend.selectAll(".cell")
+		.data(buildGridData(gcp_data.layout.weights, order=d3.range(gcp_data.layout.weights.length), tile_dim_px))
+
+		.enter().append("svg:rect")
+		.attr("class", "legend")
+		.attr("id", function(d) {return("legend_2_" + getColumn(gcp_data.meta_row, "id").indexOf(gcp_data.layout.texts[d.feature_id]));})
+		.attr("x", function(d) {return(d.x);})
+		.attr("y", function(d) {return(d.y);})
+		.attr("width", function(d) {return(d.size);})
+		.attr("height", function(d) {return(d.size);})
+		.style("fill", function(d) {
+				if (isNaN(d.num)) {
+					return "white";
+				} else {
+					return(monoScale(d.num));
+				}
+			}
+		)
+		.on("click", function(d) {
+			// get probe id
+			var id = gcp_data.layout.texts[d.feature_id]
+
+			// Look up metadata 
+			var meta_k = getColumn(gcp_data.meta_row, "id").indexOf(id);
+
+			// update panel
+			d3.select("#meta_panel2").html(
+				gcp_data.meta_row[meta_k + 1][3]);
+
+			// Unselect all other selections
+			d3.selectAll(".selected")
+				.classed("selected", false)
+				.attr("style", function(d) {
+					return("fill: " + monoScale(d.num) + ";");
+				});
+
+			// Select square
+			d3.selectAll("#legend_2_" + meta_k)
+				.classed("selected", true)
+				.attr("style", function(d) {
+					// return("fill: " + monoScale(d.num) + "; stroke: black; stroke-width: 2px;")
+					return("fill: rgb(162,78,163);")
+				});
+		});
+
+	sidebar.append("div")
+		.attr("id", "meta_panel2")
+		.attr("class", "panel-dark")
+		.html("meta info");
+
+	// P100 filter
+	// sidebar.append("h4").html("P100 filter");
+	// sidebar.append("select")
+	// 	.attr("id", "gene-selector")
+	// 	.attr("name", "gene_list")
+	// 	.attr("onchange", "geneSelector(this)")
+	// 	;
+
+	// // Populate gene list selectors
+	// var selector = $("#gene-selector");
+	// selector.append($("<option>")
+	// 	.attr("value", -1)
+	// 	.text("No filter"));
+	// for (var i = 0; i < gene_lists.length; i++) {
+	// 	selector.append($("<option>")
+	// 		.attr("value", i)
+	// 		.text(gene_lists[i][0]));
+	// }
+}
+
 $(document).ready(function() {
-	// Get signature meta data
+	// Load all data from server using AJAX requests
+
 	// Sample meta data
 	$.ajax({
 		type: "GET",
@@ -215,13 +404,12 @@ $(document).ready(function() {
 			gene_lists = parseGmt(data);
 		}
 	});
-
 });
 
-// After all data has loaded
+// After all data has loaded, this function is called
 $(document).ajaxStop(function() {
-
-	var tile_dim_px = 50;
+	// Construct sidebar
+	makeSidebar(2 * tile_dim_px);  // uses global variables p100_data and gcp_data
 
 	// Get feature order from Network2Canvas
 	var p100_feature_ids = getColumn(p100_data.meta_row, "id");  // of data
@@ -249,192 +437,9 @@ $(document).ajaxStop(function() {
 	// 		.filter(function(x) {return !isNaN(x);})  // remove missing values
 	// 	);
 
-	var tileTip = d3.tip()
-	    .attr("class", "d3-tip")
-	    .offset([-6, 0])
-	    .html(function(d) {return d;});
-
-	var attrTip = d3.tip()
-		.attr("class", "d3-tip")
-		.offset([-1, 6])
-		.direction("e")
-		.html(function(d) {
-			var html = "";
-			for (var key in d) {
-				html += key + ": " + d[key] + "<br>";
-			}
-			return html;
-		});
-
-
-	// Construct sidebar panel
-	var sidebar = d3.select("#sidebar");
-
-	sidebar.append("h3").html("Selection");
-
-	sidebar.append("h4").html("Cell line");
-
-	sidebar.append("div")
-		.attr("id", "cell_panel")
-		.attr("class", "panel-dark")
-		.html("none");
-
-	sidebar.append("h4").html("Perturbation");
-
-	sidebar.append("div")
-		.attr("id", "pert_panel")
-		.attr("class", "panel-dark")
-		.html("none");
-
-	// P100 selection panel
-	sidebar.append("h4").html("P100");
-
-	// Canvas of output from Network2Canvas
-	var p100_svg_legend = sidebar.append("div")
-			.attr("class", "border-container")
-			.append("svg")
-				.attr("width", 2*tile_dim_px)
-				.attr("height", 2*tile_dim_px)
-				.attr("class", "grid");
-
-	// SVG legend grid
-	p100_svg_legend.selectAll(".cell")
-		.data(buildGridData(p100_data.layout.weights, order=d3.range(p100_data.layout.weights.length), 2*tile_dim_px))
-		.enter().append("svg:rect")
-		.attr("class", "legend")
-		.attr("id", function(d) {return("legend_1_" + getColumn(p100_data.meta_row, "id").indexOf(p100_data.layout.texts[d.feature_id]));})
-		.attr("x", function(d) {return(d.x);})
-		.attr("y", function(d) {return(d.y);})
-		.attr("width", function(d) {return(d.size);})
-		.attr("height", function(d) {return(d.size);})
-		.style("fill", function(d) {
-				if (isNaN(d.num)) {
-					return "white";
-				} else {
-					return(monoScale(d.num));
-				}
-			}
-		)
-		.on("click", function(d) {
-			// get probe id
-			var id = p100_data.layout.texts[d.feature_id]
-
-
-			// Look up metadata 
-			var meta_k = getColumn(p100_data.meta_row, "id").indexOf(id);
-
-			// update panel
-			d3.select("#meta_panel1").html(
-				p100_data.meta_row[meta_k + 1][2] + "<br>" +
-				p100_data.meta_row[meta_k + 1][8]);
-
-			// Unselect all other selections
-			d3.selectAll(".selected")
-				.classed("selected", false)
-				.attr("style", function(d) {
-					return("fill: " + monoScale(d.num) + ";");
-				});
-
-			// Select square
-			d3.selectAll("#legend_1_" + meta_k)
-				.classed("selected", true)
-				.attr("style", function(d) {
-					return("fill: rgb(31,120,180);")
-				});
-		});
-
-	// Sidebar panel for meta data
-	sidebar.append("div")
-		.attr("id", "meta_panel1")
-		.attr("class", "panel-dark")
-		.html("meta info");
-
-	// GCP selection panel
-	sidebar.append("h4").html("GCP");
-
-	var gcp_svg_legend = sidebar.append("div")
-		.attr("class", "border-container")
-		.append("svg")
-			.attr("width", 2*tile_dim_px)
-			.attr("height", 2*tile_dim_px)
-			.attr("class", "grid");
-
-	// GCP legend grid
-	gcp_svg_legend.selectAll(".cell")
-		.data(buildGridData(gcp_data.layout.weights, order=d3.range(gcp_data.layout.weights.length), 2*tile_dim_px))
-
-		.enter().append("svg:rect")
-		.attr("class", "legend")
-		.attr("id", function(d) {return("legend_2_" + getColumn(gcp_data.meta_row, "id").indexOf(gcp_data.layout.texts[d.feature_id]));})
-		.attr("x", function(d) {return(d.x);})
-		.attr("y", function(d) {return(d.y);})
-		.attr("width", function(d) {return(d.size);})
-		.attr("height", function(d) {return(d.size);})
-		.style("fill", function(d) {
-				if (isNaN(d.num)) {
-					return "white";
-				} else {
-					return(monoScale(d.num));
-				}
-			}
-		)
-		.on("click", function(d) {
-			// get probe id
-			var id = gcp_data.layout.texts[d.feature_id]
-
-			// Look up metadata 
-			var meta_k = getColumn(gcp_data.meta_row, "id").indexOf(id);
-
-			// update panel
-			d3.select("#meta_panel2").html(
-				gcp_data.meta_row[meta_k + 1][3]);
-
-			// Unselect all other selections
-			d3.selectAll(".selected")
-				.classed("selected", false)
-				.attr("style", function(d) {
-					return("fill: " + monoScale(d.num) + ";");
-				});
-
-			// Select square
-			d3.selectAll("#legend_2_" + meta_k)
-				.classed("selected", true)
-				.attr("style", function(d) {
-					// return("fill: " + monoScale(d.num) + "; stroke: black; stroke-width: 2px;")
-					return("fill: rgb(162,78,163);")
-				});
-		});
-
-	sidebar.append("div")
-		.attr("id", "meta_panel2")
-		.attr("class", "panel-dark")
-		.html("meta info");
-
-	// P100 filter
-	// sidebar.append("h4").html("P100 filter");
-	// sidebar.append("select")
-	// 	.attr("id", "gene-selector")
-	// 	.attr("name", "gene_list")
-	// 	.attr("onchange", "geneSelector(this)")
-	// 	;
-
-	// // Populate gene list selectors
-	// var selector = $("#gene-selector");
-	// selector.append($("<option>")
-	// 	.attr("value", -1)
-	// 	.text("No filter"));
-	// for (var i = 0; i < gene_lists.length; i++) {
-	// 	selector.append($("<option>")
-	// 		.attr("value", i)
-	// 		.text(gene_lists[i][0]));
-	// }
-
-
-	// Determine the coordinate categories and values
+	// Determine the coordinate categories and values from the metadata. Shortcuts.
 	var p100_cell_ids = getColumn(p100_data.meta_col, "cell_id");
-	var cell_ids_unique = p100_cell_ids.unique();
 	var p100_pert_ids = getColumn(p100_data.meta_col, "pert_id");
-	var pert_ids_unique = p100_pert_ids.unique();
 
 	var gcp_cell_ids = getColumn(gcp_data.meta_col, "cell_id");
 	var gcp_pert_ids = getColumn(gcp_data.meta_col, "pert_id");
@@ -450,13 +455,15 @@ $(document).ajaxStop(function() {
 	for (var i = 0; i < p100_data.cell_order.length; i++) {
 		header.append($("<th>").text(p100_data.cell_order[i]));
 	}
-	header.append($("<th>").text("cluster"));  // empty
+	header.append($("<th>").text("cluster"));
 
+	// MAIN VISUALIZATION LOOP
+	// -------------------------------------------------------------
 	// Loop over every experimental condition, outer loop.
 	for (var i = 0; i < p100_data.pert_order.length; i++) {
 		var pert_sel = p100_data.pert_order[i];
 
-		// Look up data for perturbation id
+		// Look up metadata for perturbation id
 		var pert_meta_data = getPertMetaData(p100_data.meta_col, pert_sel);
 
 		// add new row to table
@@ -477,7 +484,6 @@ $(document).ajaxStop(function() {
 			.attr("class", "vertical-header-left")
 			.appendTo(row);
 
-
 		// Drug label
 		var label_svg = d3.select("#" + pert_sel)
 			.datum(pert_meta_data)
@@ -488,10 +494,8 @@ $(document).ajaxStop(function() {
 			.attr("x", 10)
 			.attr("y", 10)
 			.text(pertDescrIname(pert_meta_data))
-			.call(attrTip)
-
+			.call(attrTip)  // initialized the attribute tip
 			.on("mouseover", function(d) {
-
 				attrTip.show(d);
 			})
 			.on("mouseout", function(d) {
@@ -658,7 +662,6 @@ $(document).ajaxStop(function() {
 		}
 
 		// Cluster field of row
-
 		// look up class
 		var pert_ids = getColumn(pert_class, "pert_id");
 
