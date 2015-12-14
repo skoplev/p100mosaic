@@ -33,8 +33,9 @@
 
 // Global variables
 // -----------------------------------------------
-var p100_meta_col, p100_meta_row, p100_signatures, p100_layout, p100_cell_order, p100_pert_order;
-var gcp_meta_col, gcp_meta_row, gcp_signatures, gcp_layout, gcp_cell_order, gcp_pert_order;
+var p100_data = {};  // data for p100, including .meta_col .meta_row .signatures .layout .cell_order .pert_order
+var gcp_data = {};   // data for GCP
+
 var pert_class;
 var gene_lists;
 
@@ -67,7 +68,7 @@ $(document).ready(function() {
 		url: "p100mosaic/static/data/p100_meta_col_mean.csv",
 		dataType: "text",
 		success: function(data) {
-			p100_meta_col = parseCsv(data);
+			p100_data.meta_col = parseCsv(data);
 		}
 	});
 
@@ -77,7 +78,7 @@ $(document).ready(function() {
 		url: "p100mosaic/static/data/p100_meta_row_mean.csv",
 		dataType: "text",
 		success: function(data) {
-			p100_meta_row = parseCsv(data);
+			p100_data.meta_row = parseCsv(data);
 		}
 	});
 
@@ -87,7 +88,7 @@ $(document).ready(function() {
 		url: "p100mosaic/static/data/p100_zscore_mean.csv",
 		dataType: "text",
 		success: function(data) {
-			p100_signatures = parseCsv(data, Number);  // converts string to number
+			p100_data.signatures = parseCsv(data, Number);  // converts string to number
 		}
 	});
 
@@ -99,7 +100,7 @@ $(document).ready(function() {
 		// url: "p100mosaic/static/data/p100_abs_cor_mat_short.json",
 		dataType: "text",
 		success: function(data) {
-			p100_layout = JSON.parse(data);
+			p100_data.layout = JSON.parse(data);
 		}
 	});
 
@@ -109,7 +110,7 @@ $(document).ready(function() {
 		url: "p100mosaic/static/data/comb_pert_order.txt",
 		dataType: "text",
 		success: function(data) {
-			p100_pert_order = data.split("\n").filter(function(x) {return x !== ""});
+			p100_data.pert_order = data.split("\n").filter(function(x) {return x !== ""});
 		}
 	});
 
@@ -119,7 +120,7 @@ $(document).ready(function() {
 		url: "p100mosaic/static/data/comb_cell_order.txt",
 		dataType: "text",
 		success: function(data) {
-			p100_cell_order = data.split("\n").filter(function(x) {return x !== ""});
+			p100_data.cell_order = data.split("\n").filter(function(x) {return x !== ""});
 		}
 	});
 
@@ -133,7 +134,7 @@ $(document).ready(function() {
 		url: "p100mosaic/static/data/gcp_meta_col_mean.csv",
 		dataType: "text",
 		success: function(data) {
-			gcp_meta_col = parseCsv(data);
+			gcp_data.meta_col = parseCsv(data);
 		}
 	});
 
@@ -143,7 +144,7 @@ $(document).ready(function() {
 		url: "p100mosaic/static/data/gcp_meta_row_mean.csv",
 		dataType: "text",
 		success: function(data) {
-			gcp_meta_row = parseCsv(data);
+			gcp_data.meta_row = parseCsv(data);
 		}
 	});
 
@@ -153,7 +154,7 @@ $(document).ready(function() {
 		url: "p100mosaic/static/data/gcp_zscore_mean.csv",
 		dataType: "text",
 		success: function(data) {
-			gcp_signatures = parseCsv(data, Number);  // converts string to number
+			gcp_data.signatures = parseCsv(data, Number);  // converts string to number
 		}
 	});
 
@@ -165,7 +166,7 @@ $(document).ready(function() {
 		// url: "p100mosaic/static/data/p100_abs_cor_mat_short.json",
 		dataType: "text",
 		success: function(data) {
-			gcp_layout = JSON.parse(data);
+			gcp_data.layout = JSON.parse(data);
 		}
 	});
 
@@ -175,7 +176,7 @@ $(document).ready(function() {
 		url: "p100mosaic/static/data/gcp_pert_order.txt",
 		dataType: "text",
 		success: function(data) {
-			gcp_pert_order = data.split("\n").filter(function(x) {return x !== ""});
+			gcp_data.pert_order = data.split("\n").filter(function(x) {return x !== ""});
 		}
 	});
 
@@ -185,7 +186,7 @@ $(document).ready(function() {
 		url: "p100mosaic/static/data/gcp_cell_order.txt",
 		dataType: "text",
 		success: function(data) {
-			gcp_cell_order = data.split("\n").filter(function(x) {return x !== ""});
+			gcp_data.cell_order = data.split("\n").filter(function(x) {return x !== ""});
 		}
 	});
 
@@ -223,15 +224,15 @@ $(document).ajaxStop(function() {
 	var tile_dim_px = 50;
 
 	// Get feature order from Network2Canvas
-	var p100_feature_ids = getColumn(p100_meta_row, "id");  // of data
-	var gcp_feature_ids = getColumn(gcp_meta_row, "id");
+	var p100_feature_ids = getColumn(p100_data.meta_row, "id");  // of data
+	var gcp_feature_ids = getColumn(gcp_data.meta_row, "id");
 
 	// The order is allowed to contain duplicates
-	var p100_order = p100_layout.texts.map(function(id) {
+	var p100_order = p100_data.layout.texts.map(function(id) {
 		return p100_feature_ids.indexOf(id);
 	});
 
-	var gcp_order = gcp_layout.texts.map(function(id) {
+	var gcp_order = gcp_data.layout.texts.map(function(id) {
 		return gcp_feature_ids.indexOf(id);
 	})
 
@@ -252,10 +253,6 @@ $(document).ajaxStop(function() {
 	    .attr("class", "d3-tip")
 	    .offset([-6, 0])
 	    .html(function(d) {return d;});
-
-	// var legendTileTip = d3.tip()
-	// 	.attr("class", "d3-tip")
-	// 	.html(function(d) {return d;})
 
 	var attrTip = d3.tip()
 		.attr("class", "d3-tip")
@@ -300,13 +297,12 @@ $(document).ajaxStop(function() {
 				.attr("height", 2*tile_dim_px)
 				.attr("class", "grid");
 
-
+	// SVG legend grid
 	p100_svg_legend.selectAll(".cell")
-		.data(buildGridData(p100_layout.weights, order=d3.range(p100_layout.weights.length), 2*tile_dim_px))
-
+		.data(buildGridData(p100_data.layout.weights, order=d3.range(p100_data.layout.weights.length), 2*tile_dim_px))
 		.enter().append("svg:rect")
 		.attr("class", "legend")
-		.attr("id", function(d) {return("legend_1_" + getColumn(p100_meta_row, "id").indexOf(p100_layout.texts[d.feature_id]));})
+		.attr("id", function(d) {return("legend_1_" + getColumn(p100_data.meta_row, "id").indexOf(p100_data.layout.texts[d.feature_id]));})
 		.attr("x", function(d) {return(d.x);})
 		.attr("y", function(d) {return(d.y);})
 		.attr("width", function(d) {return(d.size);})
@@ -321,16 +317,16 @@ $(document).ajaxStop(function() {
 		)
 		.on("click", function(d) {
 			// get probe id
-			var id = p100_layout.texts[d.feature_id]
+			var id = p100_data.layout.texts[d.feature_id]
 
 
 			// Look up metadata 
-			var meta_k = getColumn(p100_meta_row, "id").indexOf(id);
+			var meta_k = getColumn(p100_data.meta_row, "id").indexOf(id);
 
 			// update panel
 			d3.select("#meta_panel1").html(
-				p100_meta_row[meta_k + 1][2] + "<br>" +
-				p100_meta_row[meta_k + 1][8]);
+				p100_data.meta_row[meta_k + 1][2] + "<br>" +
+				p100_data.meta_row[meta_k + 1][8]);
 
 			// Unselect all other selections
 			d3.selectAll(".selected")
@@ -363,12 +359,13 @@ $(document).ajaxStop(function() {
 			.attr("height", 2*tile_dim_px)
 			.attr("class", "grid");
 
+	// GCP legend grid
 	gcp_svg_legend.selectAll(".cell")
-		.data(buildGridData(gcp_layout.weights, order=d3.range(gcp_layout.weights.length), 2*tile_dim_px))
+		.data(buildGridData(gcp_data.layout.weights, order=d3.range(gcp_data.layout.weights.length), 2*tile_dim_px))
 
 		.enter().append("svg:rect")
 		.attr("class", "legend")
-		.attr("id", function(d) {return("legend_2_" + getColumn(gcp_meta_row, "id").indexOf(gcp_layout.texts[d.feature_id]));})
+		.attr("id", function(d) {return("legend_2_" + getColumn(gcp_data.meta_row, "id").indexOf(gcp_data.layout.texts[d.feature_id]));})
 		.attr("x", function(d) {return(d.x);})
 		.attr("y", function(d) {return(d.y);})
 		.attr("width", function(d) {return(d.size);})
@@ -383,14 +380,14 @@ $(document).ajaxStop(function() {
 		)
 		.on("click", function(d) {
 			// get probe id
-			var id = gcp_layout.texts[d.feature_id]
+			var id = gcp_data.layout.texts[d.feature_id]
 
 			// Look up metadata 
-			var meta_k = getColumn(gcp_meta_row, "id").indexOf(id);
+			var meta_k = getColumn(gcp_data.meta_row, "id").indexOf(id);
 
 			// update panel
 			d3.select("#meta_panel2").html(
-				gcp_meta_row[meta_k + 1][3]);
+				gcp_data.meta_row[meta_k + 1][3]);
 
 			// Unselect all other selections
 			d3.selectAll(".selected")
@@ -434,13 +431,13 @@ $(document).ajaxStop(function() {
 
 
 	// Determine the coordinate categories and values
-	var p100_cell_ids = getColumn(p100_meta_col, "cell_id");
+	var p100_cell_ids = getColumn(p100_data.meta_col, "cell_id");
 	var cell_ids_unique = p100_cell_ids.unique();
-	var p100_pert_ids = getColumn(p100_meta_col, "pert_id");
+	var p100_pert_ids = getColumn(p100_data.meta_col, "pert_id");
 	var pert_ids_unique = p100_pert_ids.unique();
 
-	var gcp_cell_ids = getColumn(gcp_meta_col, "cell_id");
-	var gcp_pert_ids = getColumn(gcp_meta_col, "pert_id");
+	var gcp_cell_ids = getColumn(gcp_data.meta_col, "cell_id");
+	var gcp_pert_ids = getColumn(gcp_data.meta_col, "pert_id");
 
 	// Populate table of svg canvases.
 	var svg_table = $("#svg-table");
@@ -450,17 +447,17 @@ $(document).ajaxStop(function() {
 
 	// svg_table
 	header.append($("<th>"));  // empty
-	for (var i = 0; i < p100_cell_order.length; i++) {
-		header.append($("<th>").text(p100_cell_order[i]));
+	for (var i = 0; i < p100_data.cell_order.length; i++) {
+		header.append($("<th>").text(p100_data.cell_order[i]));
 	}
 	header.append($("<th>").text("cluster"));  // empty
 
 	// Loop over every experimental condition, outer loop.
-	for (var i = 0; i < p100_pert_order.length; i++) {
-		var pert_sel = p100_pert_order[i];
+	for (var i = 0; i < p100_data.pert_order.length; i++) {
+		var pert_sel = p100_data.pert_order[i];
 
 		// Look up data for perturbation id
-		var pert_meta_data = getPertMetaData(p100_meta_col, pert_sel);
+		var pert_meta_data = getPertMetaData(p100_data.meta_col, pert_sel);
 
 		// add new row to table
 		var row = $("<tr>")
@@ -505,9 +502,9 @@ $(document).ajaxStop(function() {
 		trimSvg(label_svg);
 
 		// Experimental conditions, inncer loop.
-		for (var j = 0; j < p100_cell_order.length; j++) {
+		for (var j = 0; j < p100_data.cell_order.length; j++) {
 			// find data entry that satisfies both selections
-			var cell_sel = p100_cell_order[j];
+			var cell_sel = p100_data.cell_order[j];
 			var table_entry = $("<td>")
 				.attr("class", "grid")
 				.appendTo(row);
@@ -544,11 +541,8 @@ $(document).ajaxStop(function() {
 			if (p100_k !== -1) {
 				// Data found
 				var rects = svg_p100.selectAll(".cell")
-					// .attr("class", "p100-cell")
-					// .data(buildGridData(signatures[205], d3.range(signatures[205].length), 400.0))
-					.data(buildGridData(p100_signatures[p100_k], p100_order, tile_dim_px))
+					.data(buildGridData(p100_data.signatures[p100_k], p100_order, tile_dim_px))
 					.enter().append("svg:rect")
-					// .attr("class", "cell")
 					.attr("class", "rect-p100")
 					.attr("x", function(d) {return(d.x);})
 					.attr("y", function(d) {return(d.y);})
@@ -580,14 +574,13 @@ $(document).ajaxStop(function() {
 
 						// Update meta panel
 						d3.select("#meta_panel1").html(
-
-							p100_meta_row[d.feature_id + 1][2] + "<br>" +
-							p100_meta_row[d.feature_id + 1][8]
+							p100_data.meta_row[d.feature_id + 1][2] + "<br>" +
+							p100_data.meta_row[d.feature_id + 1][8]
 							);
 					})
 					.on("mouseover", function(d) {
 						tileTip.show(
-							p100_meta_row[d.feature_id + 1][2] + ":" + p100_meta_row[d.feature_id + 1][8] + 
+							p100_data.meta_row[d.feature_id + 1][2] + ":" + p100_data.meta_row[d.feature_id + 1][8] + 
 							"<br>mean_zscore = " + d.num.toPrecision(3));
 					})
 					.on("mouseout", function(d) {
@@ -617,7 +610,7 @@ $(document).ajaxStop(function() {
 
 			if (gcp_k !== -1) {
 				var rects = svg_gcp.selectAll(".cell")
-					.data(buildGridData(gcp_signatures[gcp_k], gcp_order, tile_dim_px))
+					.data(buildGridData(gcp_data.signatures[gcp_k], gcp_order, tile_dim_px))
 					.enter().append("svg:rect")
 					// .attr("class", "cell")
 					.attr("x", function(d) {return(d.x);})
@@ -634,7 +627,7 @@ $(document).ajaxStop(function() {
 					)
 					.call(tileTip)  // initialize tip function to svg element
 					.on("mouseover", function(d) {
-						tileTip.show(gcp_meta_row[d.feature_id + 1][3] +
+						tileTip.show(gcp_data.meta_row[d.feature_id + 1][3] +
 							"<br> mean_zscore = " + d.num.toPrecision(3));
 					})
 					.on("mouseout", function(d) {
@@ -658,7 +651,7 @@ $(document).ajaxStop(function() {
 
 						// Update meta panel
 						d3.select("#meta_panel2").html(
-							gcp_meta_row[d.feature_id + 1][3]);
+							gcp_data.meta_row[d.feature_id + 1][3]);
 					});
 			}
 
@@ -708,12 +701,9 @@ $(window).scroll(function() {
 			<div class="col-xs-12 col-sm-7 col-md-6">
 				<div class="panel panel-default">
 						<div class="panel-heading">Description</div>
-					 	<!-- <h2>Description</h2> -->
 					 	<div class="panel-body">
-					 		
 					 		<p>Data are generated by on the Broad's <a href="https://panoramaweb.org/labkey/project/LINCS/begin.view">LINCS P100 and GCP platforms</a> and analyzed using a within-plate z-score. Triplicate z-score signatures are averaged. The layout of the tiles/canvases is determined by a simulated annealing algorithm (<a href="http://www.maayanlab.net/N2C">Network2Canvas</a>). The algorithm attempts to position post-translational modification measurements based on expression similarity across samples and conditions. The location of the post-translational modifications on all cavases is fixed. Both cell lines (columns) and chemical perturbagens (rows) are ordered by hierarchical clustering taking into account both the P100 and GCP data.</p>
 					 		<p>For each of the data panels, on the left are the <b>P100</b> (100 phosphosites) signatures where <span class="red">red</span> represents up regulation compared to the plate and <span class="blue">blue</span> is down regulation. On the right are the <b>GCP</b> (global chromatin profiling assay) signatures where <span class="green">green</span> represents up and <span class="purple">purple</span> down.</p>
-
 					 	</div>
 				</div>
 			</div>
