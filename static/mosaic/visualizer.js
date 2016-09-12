@@ -226,14 +226,14 @@ function buildGridData(numbers, order, frame_size) {
 	for (var i = 0; i < order.length; i++) {
 
 		// Check if new row should be initiated.
-		if (i !== 0 && i % dim == 0) {
+		if (i !== 0 && i % dim === 0) {
 			// new row
 			pen_xpos = 0.0;
 			pen_ypos += square_size;
 		} 
 
 		// Construct data object
-		dobj = {};
+		var dobj = {};
 		dobj.x = pen_xpos;
 		dobj.y = pen_ypos;
 		dobj.size = square_size;
@@ -250,7 +250,7 @@ function buildGridData(numbers, order, frame_size) {
 }
 
 
-// Trim svg element to bounday box
+// Trim svg element to boundary box
 function trimSvg(svg) {
 	var box = svg.node().getBBox();
 	svg.attr("width", box.width + box.x);

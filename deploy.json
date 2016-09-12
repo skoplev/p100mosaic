@@ -1,24 +1,38 @@
 {
-	"id": "p100mosaic",
-	"instances": 1,
-	"cpus": 1,
-	"mem": 1024,
-	"container": {
-		"type": "DOCKER",
-		"docker": {
-			"image": "146.203.54.165:5000/p100mosaic:latest",
-			"forcePullImage": true,
-			"network": "BRIDGE",
-			"portMappings": [
-				{
-					"containerPort": 5000,
-					"hostPort": 0,
-					"protocol": "tcp"
-				}
-			]
-		}
-	},
-	"labels": {
-		"public": "true"
-	}
+  "id": "/p100mosaic",
+  "cmd": null,
+  "cpus": 1,
+  "mem": 1024,
+  "disk": 0,
+  "instances": 1,
+  "container": {
+    "type": "DOCKER",
+    "volumes": [],
+    "docker": {
+      "image": "maayanlab/p100mosaic:latest",
+      "network": "BRIDGE",
+      "portMappings": [
+        {
+          "containerPort": 5000,
+          "hostPort": 0,
+          "servicePort": 10074,
+          "protocol": "tcp",
+          "labels": {}
+        }
+      ],
+      "privileged": false,
+      "parameters": [],
+      "forcePullImage": true
+    }
+  },
+  "labels": {
+    "public": "true"
+  },
+  "portDefinitions": [
+    {
+      "port": 10074,
+      "protocol": "tcp",
+      "labels": {}
+    }
+  ]
 }
